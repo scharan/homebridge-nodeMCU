@@ -15,7 +15,12 @@
 				"characteristics"
 			],
 			"url": "your remove ip",
-			"http_method": "GET"
+			"http_method": "GET",
+			"manufacturer": "HiLetgo",
+			"model": "ESP8266 12F NodeMCU",
+			"serial_number": "123456",
+			"update_interval": 1000,
+			"timeout": 1000
 		}
 	]
 }

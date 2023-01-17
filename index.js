@@ -2,9 +2,8 @@ let request = require('request');
 let Service;
 let Characteristic;
 const DEF_UNITS = "ppm";
-const DEF_TIMEOUT = 5000;
+const DEF_TIMEOUT = 1000;
 const DEF_INTERVAL = 120000;  // in milisecond
-
 
 module.exports = function (homebridge) {
 	Service = homebridge.hap.Service;
@@ -12,9 +11,11 @@ module.exports = function (homebridge) {
 	homebridge.registerAccessory("homebridge-nodemcu", "NodeMCU", NodeMCU);
 	console.log("NodeMCU: module.exports\r\n");
 }
+
 function NodeMCU(log, config) {
 	this.log = log;
-	
+	this.not_available = "Not available";
+
 	this.name = config["name"];
 	this.serviceName = config.service.replace(/\s/g, '');
 	this.characteristics = config["characteristics"];
@@ -24,14 +25,19 @@ function NodeMCU(log, config) {
 	this.units = config["units"] || DEF_UNITS;
 	this.auth = config["auth"];
 	this.update_interval = Number( config["update_interval"] || DEF_INTERVAL );
+	this.manufacturer = config["manufacturer"] || this.not_available;
+	this.model = config["model"] || this.not_available;
+	this.serial_number = config["serial_number"] || this.not_available;
+
 	// Internal variables
 	this.last_value = null;
 	this.waiting_response = false;
 	this.listener = [];
 }
+
 NodeMCU.prototype.updateState = function (state) {
 	if (this.waiting_response) {
-		this.log('waiting response!!!');
+		// this.log('awaiting response!!!');
 		return;
 	}
 
@@ -65,17 +71,17 @@ NodeMCU.prototype.updateState = function (state) {
 					var response = JSON.parse(body);
 					for (var index in this.characteristics) {
 						var charac = this.characteristics[index].replace(/\s/g, '');
-						if(response.hasOwnProperty(charac))
+						if(response.hasOwnProperty(charac)) {
 							value[charac] = Number(response[charac]);
+						}
 						else
 							this.log("NodeMCU: " + this.characteristics[index] + " has no information");
 					}
-					
+
 					if (Object.keys(value).length == 0) {
 						throw new Error('NodeMCU: No valid value');
 					}
 					
-					this.log('HTTP successful response');
 				} catch (parseErr) {
 					this.log('Error processing received information: ' + parseErr.message);
 					error = parseErr;
@@ -85,17 +91,18 @@ NodeMCU.prototype.updateState = function (state) {
 				resolve(value);
 			} 
 			else {
+				this.log("NodeMCU: " + error);
 				reject(error);
 			}
 			this.waiting_response = false;
 		});
 	}).then((value) => {
 		for (var charac in value) {
-			this.log("NodeMCU: charac:" + charac + ", value:" + value[charac]);
 			this.mservice.getCharacteristic(Characteristic[charac]).updateValue(value[charac], null);
 		}
 		return value;
 	}, (error) => {
+		this.log("NodeMCU: " + error);
 		return error;
 	});
 }
@@ -103,9 +110,9 @@ NodeMCU.prototype.updateState = function (state) {
 NodeMCU.prototype.getServices = function () {
 	this.informationService = new Service.AccessoryInformation();
 	this.informationService
-	.setCharacteristic(Characteristic.Manufacturer, "@metbosch manufacturer")
-	.setCharacteristic(Characteristic.Model, "Model not available")
-	.setCharacteristic(Characteristic.SerialNumber, "Not defined");
+	.setCharacteristic(Characteristic.Manufacturer, this.manufacturer)
+	.setCharacteristic(Characteristic.Model, this.model)
+	.setCharacteristic(Characteristic.SerialNumber, this.serial_number);
 
 	switch (this.serviceName) {
 		case "AccessoryInformation": 
@@ -227,9 +234,9 @@ NodeMCU.prototype.getServices = function () {
 			break;
 		default: 
 			this.mservice = null;  
-			this.log("NodeMCU: service not available yet!");
+			this.log("NodeMCU: service" + this.serviceName + " not available yet!");
 	}
-	
+
 	if(this.characteristics != null) {
 		if (typeof this.characteristics === "string")
 			this.characteristics = [this.characteristics];
@@ -250,11 +257,11 @@ NodeMCU.prototype.getServices = function () {
 	}
 	else
 		this.log("NodeMCU: please set characteristics field in config file");
-	
+
 	if (this.update_interval > 0) {
-		//this.timer = setInterval(this.updateState.bind(this), this.update_interval);
+		this.timer = setInterval(this.updateState.bind(this), this.update_interval);
 	}
-	
+
 	function charcHelper(name){
 		return {
 			getState: function (callback) {
@@ -267,7 +274,7 @@ NodeMCU.prototype.getServices = function () {
 					return error;
 				});
 			},
-			
+
 			setState: function (state, callback) {
 				this.updateState(name + "=" + state); //This sets the promise in last_value
 				this.last_value.then((value) => {
@@ -280,5 +287,6 @@ NodeMCU.prototype.getServices = function () {
 			},
 		};
 	}
+
 	return [this.informationService, this.mservice];
 }

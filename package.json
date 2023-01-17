@@ -1,12 +1,19 @@
 {
   "name": "homebridge-nodeMCU",
-  "version": "0.0.1",
-  "description": "Node MCU Sample Platform plugin allows homebridge to connect to Node Muc and interact with Apple-defined sensors/actuators",
+  "version": "0.0.2",
+  "description": "Plugin to enable NodeMCU based accessories integration with Apple Homekit via Homebridge.",
   "author": "Black Brean <anh.nguyen@codingland.com>",
   "license": "ISC",
   "keywords": [
     "homebridge-plugin"
   ],
+  "scripts": {
+    "clean": "rimraf ./dist",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run build",
+    "postpublish": "npm run clean",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "repository": {
     "type": "git",
     "url": "git@github.com:dauden/homebridge-nodeMCU.git"
