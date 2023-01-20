@@ -1,3 +1,4 @@
+#include <ESP8266mDNS.h>
 #include <ESP8266WiFi.h>
 
 const int analogInPin = A0;  // ESP8266 Analog Pin ADC0 = A0
@@ -8,13 +9,14 @@ enum LEAK_STATUS {
 };
 int ledPin = 2; // GPIO2 & built-in, on-board LED
 
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "YOUR_VALUE";
+const char* password = "YOUR_VALUE";
+const char* TYPE = "WaterLeakSensor";
 
 WiFiServer server(80);
 
 void setup() {
-  Serial.begin(115200); // initialize serial communication at 115200; eg., logs
+  Serial.begin(115200);   // initialize serial communication at 115200, eg., for logs
   delay(10); // Why?
 
   WiFi.mode(WIFI_STA);
@@ -25,21 +27,31 @@ void setup() {
   delay(100);
   
   // Set the hostname
-  WiFi.hostname("ESP8266-Washer-LeakSensor");
+  const String unique_id = WiFi.macAddress() + String(":") + String(ESP.getChipId(), HEX);
+  WiFi.hostname(TYPE + unique_id);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("");
   Serial.println("WiFi connected");
-  
+
   server.begin();
   Serial.println("HTTP server started");
+
+  Serial.println("mDNS boardcasting as: " + unique_id);
+  if (MDNS.begin(unique_id)) {
+    Serial.println("mDNS boardcasting as: " + unique_id);
+    MDNS.addService(TYPE, "tcp", 80 /*port*/);
+  } else {
+    Serial.println("Failed to start MDNS, restarting ESP");
+    ESP.restart();
+  }
 }
 
 void loop() {
+  MDNS.update(); // Seems like this is needed to broadcast mDNS addresses
   WiFiClient client = server.available(); 
   if (!client) {
     return;
@@ -67,13 +79,13 @@ void loop() {
 
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/json");
-  // Is this necessary? Is it lower power usage to keep connection open?
+  // Is this necessary? Is it better (lowe power usage) to keep connection open?
   // client.println("Connection: close");
   client.println(); // New line to separate HTTP headers from response
 
   LEAK_STATUS ls = getLeakStatus();
   if (ls == LEAK_STATUS::DETECTED) {
-      client.println("{\"LeakDetected\":1}"); // more efficient than sprintf()?
+      client.println("{\"LeakDetected\":1}"); // Simpler/more efficient than sprintf()?
   } else {
       client.println("{\"LeakDetected\":0}");
   }
@@ -89,8 +101,7 @@ LEAK_STATUS getLeakStatus() {
   int sensorValue = analogRead(analogInPin);
 
   // print the readings in the Serial Monitor
-  Serial.print("sensor = ");
-  Serial.println(sensorValue);
+  Serial.println("sensor = " + sensorValue);
 
   LEAK_STATUS ls = LEAK_STATUS::NOT_DETECTED;
   // ESP2866 on ADC0 is 10 bit, so gets a range 0-1024
