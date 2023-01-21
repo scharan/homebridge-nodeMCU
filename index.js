@@ -1,4 +1,28 @@
 let request = require('request');
+var mdns = require('multicast-dns')();
+
+// This should be a union of accessories from mDNS discovery and from Homebridge Accessories config.json
+let DiscoveredAccessories = {};
+
+// Remember to update accessory IFF some accessory information has changed
+mdns.on('response', function(response) {
+	response.answers.forEach(function(answer) {
+		if ((answer.name.includes('WaterLeakSensor') && answer.type == 'SRV')) {
+			let accessoryName = answer.data.target;
+			DiscoveredAccessories[accessoryName] = {port: answer.port};
+
+			// Send out a query anyway, in case IP has changed
+			mdns.query({
+				questions: [{name: accessoryName, type:'A'}]
+			});
+		} else if ((Object.keys(DiscoveredAccessories).includes(answer.name) &&
+					answer.type == 'A' &&
+					answer.class == 'IN')) {
+			DiscoveredAccessories[answer.name].ip = answer.data;
+		}
+	});
+});
+
 let Service;
 let Characteristic;
 const DEF_UNITS = "ppm";
@@ -9,7 +33,6 @@ module.exports = function (homebridge) {
 	Service = homebridge.hap.Service;
 	Characteristic = homebridge.hap.Characteristic;
 	homebridge.registerAccessory("homebridge-nodemcu", "NodeMCU", NodeMCU);
-	console.log("NodeMCU: module.exports\r\n");
 }
 
 function NodeMCU(log, config) {
@@ -18,7 +41,7 @@ function NodeMCU(log, config) {
 
 	this.name = config["name"];
 	this.serviceName = config.service.replace(/\s/g, '');
-	this.characteristics = config["characteristics"];
+	this.characteristics = config["characteristics"] || ['LeakDetected'];
 	this.url = config["url"];
 	this.http_method = config["http_method"] || "GET";
 	this.timeout = config["timeout"] || DEF_TIMEOUT;

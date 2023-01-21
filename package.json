@@ -26,6 +26,7 @@
     "homebridge": ">=0.4.38"
   },
   "dependencies": {
+    "multicast-dns": "^7.2.5",
     "request": "^2.85.0"
   }
 }

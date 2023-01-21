@@ -27,7 +27,10 @@ void setup() {
   delay(100);
   
   // Set the hostname
-  const String unique_id = WiFi.macAddress() + String(":") + String(ESP.getChipId(), HEX);
+  String unique_id = WiFi.macAddress() + String(ESP.getChipId(), HEX);
+  unique_id.replace(":", "");
+  unique_id.toLowerCase();
+
   WiFi.hostname(TYPE + unique_id);
   WiFi.begin(ssid, password);
 
@@ -40,7 +43,6 @@ void setup() {
   server.begin();
   Serial.println("HTTP server started");
 
-  Serial.println("mDNS boardcasting as: " + unique_id);
   if (MDNS.begin(unique_id)) {
     Serial.println("mDNS boardcasting as: " + unique_id);
     MDNS.addService(TYPE, "tcp", 80 /*port*/);
@@ -52,6 +54,7 @@ void setup() {
 
 void loop() {
   MDNS.update(); // Seems like this is needed to broadcast mDNS addresses
+
   WiFiClient client = server.available(); 
   if (!client) {
     return;
