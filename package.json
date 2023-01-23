@@ -2,24 +2,17 @@
   "name": "homebridge-nodeMCU",
   "version": "0.0.2",
   "description": "Plugin to enable NodeMCU based accessories integration with Apple Homekit via Homebridge.",
-  "author": "Black Brean <anh.nguyen@codingland.com>",
+  "author": "Black Brean <anh.nguyen@codingland.com>, Sai Charan Koduru <scharan@cs.ucr.edu>",
   "license": "ISC",
   "keywords": [
     "homebridge-plugin"
   ],
-  "scripts": {
-    "clean": "rimraf ./dist",
-    "build": "rimraf ./dist && tsc",
-    "prepublishOnly": "npm run build",
-    "postpublish": "npm run clean",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": {
     "type": "git",
-    "url": "git@github.com:dauden/homebridge-nodeMCU.git"
+    "url": "git@github.com:scharan/homebridge-nodeMCU.git"
   },
   "bugs": {
-    "url": "https://github.com/dauden/homebridge-nodeMCU/issues"
+    "url": "https://github.com/scharan/homebridge-nodeMCU/issues"
   },
   "engines": {
     "node": ">=9.11.1",

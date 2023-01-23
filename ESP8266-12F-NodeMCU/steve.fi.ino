@@ -1,3 +1,5 @@
+// From https://steve.fi/hardware/esp8266-basics/
+
 #include <ESP8266WiFi.h>
 
 const char* ssid = "";
